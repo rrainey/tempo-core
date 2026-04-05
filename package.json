@@ -1,0 +1,50 @@
+{
+  "name": "@tempo/core",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "egm96-universal": "^1.1.1",
+    "geodesy": "^2.4.0",
+    "gopro-telemetry": "^1.2.11",
+    "gpmf-extract": "^0.3.3",
+    "nmea-simple": "^3.3.0"
+  },
+  "peerDependencies": {
+    "@mantine/core": "^8.3.2",
+    "@mantine/hooks": "^8.3.2",
+    "@mantine/notifications": "^8.3.2",
+    "@tabler/icons-react": "^3.34.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^3.1.2",
+    "three": "^0.180.0"
+  },
+  "peerDependenciesMeta": {
+    "@mantine/core": { "optional": true },
+    "@mantine/hooks": { "optional": true },
+    "@mantine/notifications": { "optional": true },
+    "@tabler/icons-react": { "optional": true },
+    "react": { "optional": true },
+    "react-dom": { "optional": true },
+    "recharts": { "optional": true },
+    "three": { "optional": true }
+  },
+  "devDependencies": {
+    "@types/geodesy": "^2.2.8",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/three": "^0.180.0",
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.6",
+    "typescript": "^5"
+  }
+}
