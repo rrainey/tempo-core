@@ -1,10 +1,10 @@
 // components/formation/JumperListPanel.tsx
 import React, { useMemo } from 'react';
 import { Card, Table, Text, Badge, Group, Stack, Title, Divider } from '@mantine/core';
-import { projectFormationAtTime, interpolatePosition } from '../../lib/formation/coordinates';
-import type { AltitudeMode } from '../../lib/formation/coordinates';
+import { projectFormationAtTime, interpolatePosition } from '../../formation/coordinates';
+import type { AltitudeMode } from '../../formation/coordinates';
 import type { FormationData } from './FormationViewer';
-import type { GeodeticCoordinates, Vector3 } from '../../lib/formation/types';
+import type { GeodeticCoordinates, Vector3 } from '../../formation/types';
 
 interface JumperMetrics {
   userId: string;

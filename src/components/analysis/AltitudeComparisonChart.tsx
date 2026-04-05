@@ -12,7 +12,7 @@ import {
   ResponsiveContainer,
   Brush,
 } from 'recharts';
-import { TimeSeriesPoint } from '../../lib/analysis/log-parser';
+import { TimeSeriesPoint } from '../../analysis/log-parser';
 
 const METERS_TO_FEET = 3.28084;
 

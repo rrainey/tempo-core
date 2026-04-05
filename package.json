@@ -27,16 +27,36 @@
     "three": "^0.180.0"
   },
   "peerDependenciesMeta": {
-    "@mantine/core": { "optional": true },
-    "@mantine/hooks": { "optional": true },
-    "@mantine/notifications": { "optional": true },
-    "@tabler/icons-react": { "optional": true },
-    "react": { "optional": true },
-    "react-dom": { "optional": true },
-    "recharts": { "optional": true },
-    "three": { "optional": true }
+    "@mantine/core": {
+      "optional": true
+    },
+    "@mantine/hooks": {
+      "optional": true
+    },
+    "@mantine/notifications": {
+      "optional": true
+    },
+    "@tabler/icons-react": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "recharts": {
+      "optional": true
+    },
+    "three": {
+      "optional": true
+    }
   },
   "devDependencies": {
+    "@mantine/core": "^8.3.2",
+    "@mantine/hooks": "^8.3.2",
+    "@mantine/notifications": "^8.3.2",
+    "@tabler/icons-react": "^3.41.1",
     "@types/geodesy": "^2.2.8",
     "@types/jest": "^30.0.0",
     "@types/node": "^20",
@@ -44,7 +64,12 @@
     "@types/react-dom": "^19",
     "@types/three": "^0.180.0",
     "jest": "^30.3.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "recharts": "^3.8.1",
+    "three": "^0.183.2",
     "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

@@ -16,7 +16,7 @@ import {
   ReferenceArea
 } from 'recharts';
 import { IconClock, IconRuler } from '@tabler/icons-react';
-import { FALL_RATE_AVG_MIN, FALL_RATE_AVG_MAX } from '../../lib/utils/constants';
+import { FALL_RATE_AVG_MIN, FALL_RATE_AVG_MAX } from '../../utils/constants';
 
 interface VelocityBinData {
   fallRate_mph: number;

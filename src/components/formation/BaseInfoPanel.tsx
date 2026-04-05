@@ -1,8 +1,8 @@
 // components/formation/BaseInfoPanel.tsx
 import React from 'react';
 import { Card, Stack, Text, Title, Badge, Group, Divider } from '@mantine/core';
-import { interpolatePosition } from '../../lib/formation/coordinates';
-import type { AltitudeMode } from '../../lib/formation/coordinates';
+import { interpolatePosition } from '../../formation/coordinates';
+import type { AltitudeMode } from '../../formation/coordinates';
 import type { FormationData } from './FormationViewer';
 
 interface BaseInfoPanelProps {

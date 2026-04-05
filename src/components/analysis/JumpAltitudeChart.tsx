@@ -14,7 +14,7 @@ import {
   Dot,
   Label,
 } from 'recharts';
-import { TimeSeriesPoint } from '../../lib/analysis/log-parser';
+import { TimeSeriesPoint } from '../../analysis/log-parser';
 
 interface ChartDataPoint {
   time: number; // seconds from start
