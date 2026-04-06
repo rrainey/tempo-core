@@ -137,9 +137,11 @@ export function interpolatePosition(
   const groundtrack_degT = after.groundtrack_degT || before.groundtrack_degT;
   const groundspeed_kmph = after.groundspeed_kmph || before.groundspeed_kmph;
   
-  // Calculate vertical speed from barometric altitude change
-  const dAlt_m = (after.baroAlt_ft - before.baroAlt_ft) * 0.3048;
-  const verticalSpeed_mps = dt > 0 ? -dAlt_m / dt : 0; // Negative because falling
+  // Interpolate pre-computed vertical speed (GNSS-derived, stored at load time)
+  // rather than recomputing from raw baro deltas which amplifies sensor noise.
+  const verticalSpeed_mps = (before.verticalSpeed_mps != null && after.verticalSpeed_mps != null)
+    ? before.verticalSpeed_mps + t * (after.verticalSpeed_mps - before.verticalSpeed_mps)
+    : (before.verticalSpeed_mps ?? after.verticalSpeed_mps);
 
   // SLERP interpolation for orientation quaternion
   const orientation_q = (before.orientation_q && after.orientation_q)
@@ -155,7 +157,9 @@ export function interpolatePosition(
     groundtrack_degT,
     groundspeed_kmph,
     verticalSpeed_mps,
-    normalizedFallRate_mph: before.normalizedFallRate_mph, // Will be recalculated
+    normalizedFallRate_mph: (before.normalizedFallRate_mph != null && after.normalizedFallRate_mph != null)
+      ? before.normalizedFallRate_mph + t * (after.normalizedFallRate_mph - before.normalizedFallRate_mph)
+      : (before.normalizedFallRate_mph ?? after.normalizedFallRate_mph),
     orientation_q,
     isInterpolated
   };
