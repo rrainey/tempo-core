@@ -28,6 +28,7 @@ export interface ParsedLogData {
   gps: GPSPoint[]; // GPS positions with barometric altitude
   gpsAltitude: TimeSeriesPoint[]; // GPS altitude in feet MSL
   staticPressure: TimeSeriesPoint[]; // Raw static pressure in hPa
+  acceleration: TimeSeriesPoint[]; // IMU acceleration magnitude in m/s²
 
   // Raw parsed entries from DropkickReader
   logEntries: KMLDataV1[];
@@ -89,6 +90,7 @@ export class LogParser {
           gps: [],
           gpsAltitude: [],
           staticPressure: [],
+          acceleration: [],
           logEntries: [],
           hasGPS: false,
           hasValidData: false,
@@ -112,6 +114,7 @@ export class LogParser {
       const gps: GPSPoint[] = [];
       const gpsAltitude: TimeSeriesPoint[] = [];
       const staticPressure: TimeSeriesPoint[] = [];
+      const acceleration: TimeSeriesPoint[] = [];
 
       let hasGPS = false;
 
@@ -157,6 +160,15 @@ export class LogParser {
             value: entry.staticPressure_hPa
           });
         }
+
+        // IMU acceleration magnitude
+        if (entry.accel_mps2 !== null) {
+          const a = entry.accel_mps2;
+          acceleration.push({
+            timestamp: entry.timeOffset,
+            value: Math.sqrt(a.x * a.x + a.y * a.y + a.z * a.z)
+          });
+        }
       }
 
       console.log(`[PARSER] Parsed successfully:`);
@@ -168,6 +180,7 @@ export class LogParser {
       console.log(`  - GPS altitude points: ${gpsAltitude.length}`);
       console.log(`  - Static pressure points: ${staticPressure.length}`);
       console.log(`  - Vspeed points: ${vspeed.length}`);
+      console.log(`  - Acceleration points: ${acceleration.length}`);
       console.log(`  - GPS points: ${gps.length}`);
       console.log(`  - Log version: ${reader.logVersion} (${reader.logString})`);
 
@@ -180,6 +193,7 @@ export class LogParser {
         gps,
         gpsAltitude,
         staticPressure,
+        acceleration,
         logEntries,
         hasGPS,
         hasValidData: true,
@@ -202,6 +216,7 @@ export class LogParser {
         gps: [],
         gpsAltitude: [],
         staticPressure: [],
+        acceleration: [],
         logEntries: [],
         hasGPS: false,
         hasValidData: false,
