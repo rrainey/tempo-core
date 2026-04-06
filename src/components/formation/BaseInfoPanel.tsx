@@ -50,8 +50,8 @@ export const BaseInfoPanel: React.FC<BaseInfoPanelProps> = ({
     <Card withBorder>
       <Stack gap="xs">
         <Group justify="space-between">
-          <Title order={5}>Base Jumper</Title>
           <Badge size="lg" color="blue">{baseParticipant.name}</Badge>
+          <Title order={5}>Base</Title>
         </Group>
 
         <Divider />
@@ -68,7 +68,7 @@ export const BaseInfoPanel: React.FC<BaseInfoPanelProps> = ({
               size="sm"
               variant="light"
             >
-              {normalizedFallRate.toFixed(0)} norm
+              {normalizedFallRate.toFixed(0)} cal
             </Badge>
           </Stack>
 

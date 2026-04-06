@@ -593,9 +593,9 @@ export const FormationViewer: React.FC<FormationViewerProps> = ({
 
   // ── render ──
   return (
-    <Stack gap="sm" style={{ width: '100%' }}>
+    <Stack gap="sm" style={{ width: '100%', height: '100%' }}>
       {/* 3D viewport with optional video overlay */}
-      <div style={{ position: 'relative', width: '100%', height: '600px' }}>
+      <div style={{ position: 'relative', width: '100%', flex: 1, minHeight: '400px' }}>
         <div
           ref={mountRef}
           style={{
