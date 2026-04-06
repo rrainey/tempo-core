@@ -284,7 +284,7 @@ export function calibrateFallRate(
   
   // Convert to mph and apply calibration
   const uncalibrated_mph = Math.abs(verticalSpeed_mps) * 2.23694;
-  return uncalibrated_mph / factor;
+  return uncalibrated_mph * factor;
 }
 
 /**
