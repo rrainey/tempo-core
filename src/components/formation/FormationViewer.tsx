@@ -226,7 +226,7 @@ export const FormationViewer: React.FC<FormationViewerProps> = ({
     const height = el.clientHeight || 600;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x002233);
+    scene.background = new THREE.Color(0x111111);
 
     const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 50000);
     camera.position.set(0, 200, 0); // default: overhead / God's eye view
