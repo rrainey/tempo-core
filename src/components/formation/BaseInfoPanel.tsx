@@ -184,7 +184,7 @@ export const BaseInfoPanel: React.FC<BaseInfoPanelProps> = ({
             <Text size="sm" fw={500}>
               {heading.toFixed(0)}° / {groundspeed_mph.toFixed(0)} mph
             </Text>
-            <WindBarb speedMph={groundspeed_mph} driftHeadingDeg={heading} />
+            <WindBarb speedMph={groundspeed_mph} driftHeadingDeg={heading+180} />
             <Text size="xs" c="dimmed">F{mphToBeaufort(groundspeed_mph)}</Text>
           </Group>
         </Group>
