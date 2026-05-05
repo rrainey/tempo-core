@@ -1,7 +1,7 @@
 // components/home/VelocityBinChart.tsx
 
-import React, { useState } from 'react';
-import { Card, Text, Group, Badge, Stack, Select } from '@mantine/core';
+import React from 'react';
+import { Card, Text, Group, Badge, Stack } from '@mantine/core';
 import {
   BarChart,
   Bar,
@@ -44,15 +44,15 @@ interface VelocityBinSummary {
   };
 }
 
+export type DisplayMode = 'raw' | 'calibrated' | 'both';
+
 interface VelocityBinChartProps {
   data: VelocityBinData[];
   summary: VelocityBinSummary;
+  displayMode: DisplayMode;
 }
 
-type DisplayMode = 'raw' | 'calibrated' | 'both';
-
-export function VelocityBinChart({ data, summary }: VelocityBinChartProps) {
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('raw');
+export function VelocityBinChart({ data, summary, displayMode }: VelocityBinChartProps) {
 
   // Custom tooltip
   const CustomTooltip = ({ active, payload }: any) => {
@@ -184,22 +184,6 @@ export function VelocityBinChart({ data, summary }: VelocityBinChartProps) {
               </div>
             </Group>
           </Card>
-
-          {/* Display Mode Selector */}
-          <Select
-            label="Display Mode"
-            value={displayMode}
-            onChange={(value) => setDisplayMode(value as DisplayMode)}
-            data={[
-              { value: 'raw', label: 'Raw Fall Rate' },
-              { value: 'calibrated', label: 'Calibrated Fall Rate' },
-              { value: 'both', label: 'Both (Comparison)' }
-            ]}
-            allowDeselect={false}
-            styles={{
-              root: { flex: 1 }
-            }}
-          />
         </Group>
 
         {/* Average Range Info (only show for calibrated) */}
@@ -261,7 +245,10 @@ export function VelocityBinChart({ data, summary }: VelocityBinChartProps) {
               stroke="#c5c0c9"
               tick={{ fontSize: 12 }}
               label={{
-                value: 'Fall Rate (mph)',
+                value:
+                  displayMode === 'raw' ? 'Raw Fall Rate (mph)' :
+                  displayMode === 'calibrated' ? 'Calibrated Fall Rate (mph)' :
+                  'Fall Rate (mph)',
                 angle: -90,
                 position: 'insideLeft',
                 style: { fill: '#c5c0c9', textAnchor: 'middle' },

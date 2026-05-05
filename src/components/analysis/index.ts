@@ -1,4 +1,7 @@
 export { AccelerationChart } from './AccelerationChart';
 export { AltitudeComparisonChart } from './AltitudeComparisonChart';
 export { VelocityBinChart } from './VelocityBinChart';
+export type { DisplayMode } from './VelocityBinChart';
+export { FallRateChart } from './FallRateChart';
+export type { FallRateSeriesPoint } from './FallRateChart';
 export { JumpAltitudeChart } from './JumpAltitudeChart';
