@@ -4,6 +4,7 @@ export { ViewControls, VIEW_CONFIGURATIONS } from './ViewControls';
 export type { ViewConfiguration } from './ViewControls';
 export { JumperListPanel } from './JumperListPanel';
 export { BaseInfoPanel } from './BaseInfoPanel';
+export { FormationFallRateChart } from './FormationFallRateChart';
 export { createHumanoidMesh, disposeHumanoidMesh } from './HumanoidMesh';
 export { createAxisIndicators, disposeAxisIndicators } from './AxisIndicator';
 export { VideoOverlay } from './VideoOverlay';

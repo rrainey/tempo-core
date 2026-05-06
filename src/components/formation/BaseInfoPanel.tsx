@@ -4,6 +4,7 @@ import { Card, Stack, Text, Title, Badge, Group, Divider } from '@mantine/core';
 import { interpolatePosition } from '../../formation/coordinates';
 import type { AltitudeMode } from '../../formation/coordinates';
 import type { FormationData } from './FormationViewer';
+import { FormationFallRateChart } from './FormationFallRateChart';
 
 const BARB_COLOR = 'var(--mantine-color-blue-filled)';
 
@@ -188,6 +189,18 @@ export const BaseInfoPanel: React.FC<BaseInfoPanelProps> = ({
             <Text size="xs" c="dimmed">F{mphToBeaufort(groundspeed_mph)}</Text>
           </Group>
         </Group>
+
+        {baseParticipant.fallRateSeries && baseParticipant.fallRateSeries.length > 0 && (
+          <>
+            <Divider />
+            <FormationFallRateChart
+              series={baseParticipant.fallRateSeries}
+              currentTime={currentTime}
+              timelineStart={formation.timelineStart ?? 0}
+              timelineEnd={formation.timelineEnd ?? currentTime}
+            />
+          </>
+        )}
       </Stack>
     </Card>
   );

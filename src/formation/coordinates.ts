@@ -434,6 +434,8 @@ export interface ParticipantData {
   isVisible: boolean;
   timeSeries: TimeSeriesPoint[];
   refBaroAlt_ft?: number; // baro reading at calibration reference time (for cross-device recalibration)
+  fallRateSeries?: import('../analysis/fall-rate-series').FallRateSeriesPoint[];
+  fallRateAnalysisWindow?: import('../analysis/fall-rate-series').FallRateAnalysisWindow;
 }
 
 export interface ProjectedPosition {
