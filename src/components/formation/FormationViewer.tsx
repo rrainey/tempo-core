@@ -697,7 +697,7 @@ export const FormationViewer: React.FC<FormationViewerProps> = ({
             Video ({videos[0].jumperId})
           </Button>
         )}
-        <Text size="sm" fw={500}>Altitude:</Text>
+        <Text size="sm" fw={500}>Reference Altitude:</Text>
         <SegmentedControl
           value={altitudeMode}
           onChange={v => onAltitudeModeChange?.(v as AltitudeMode)}

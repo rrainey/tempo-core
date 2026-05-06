@@ -29,10 +29,10 @@ interface FormationFallRateChartProps {
   timelineEnd: number;
 }
 
-const LINE_COLOR = '#ddff55';
+const LINE_COLOR = 'var(--mantine-primary-color-filled)';
 const DOT_FILL = '#ffffff';
-const DOT_STROKE = '#ddff55';
-const PULSE_FILL = '#ddff55';
+const DOT_STROKE = 'var(--mantine-primary-color-filled)';
+const PULSE_FILL = 'var(--mantine-primary-color-filled)';
 
 const PulsingDot = (props: { cx?: number; cy?: number }) => {
   const { cx, cy } = props;
@@ -140,6 +140,7 @@ export const FormationFallRateChart = ({
             position: 'absolute',
             top: 8,
             right: 12,
+            fontFamily: 'var(--font-geist-mono), monospace',
             fontSize: 32,
             lineHeight: 1,
             color: LINE_COLOR,

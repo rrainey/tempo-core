@@ -123,15 +123,9 @@ export const BaseInfoPanel: React.FC<BaseInfoPanelProps> = ({
     ? (currentMetrics.location.alt_m - formation.dzElevation_m) * 3.28084
     : null;
 
-  const getFallRateColor = (rate: number) => {
-    if (rate < 110) return 'green';
-    if (rate > 130) return 'red';
-    return 'yellow';
-  };
-
   const baroAlt = (currentMetrics.adjBaroAlt_ftAGL ?? currentMetrics.baroAlt_ft);
-  const actualFallRate = (currentMetrics.verticalSpeed_mps ?? 0) * 2.23694;
-  const normalizedFallRate = currentMetrics.normalizedFallRate_mph || 0;
+  const displayAltAGL = altitudeMode === 'Barometric' ? baroAlt : altitudeAGL;
+  const altitudeSourceLabel = altitudeMode === 'Barometric' ? 'Baro' : 'GPS';
   const heading = currentMetrics.groundtrack_degT || 0;
   const groundspeed_mph = (currentMetrics.groundspeed_kmph || 0) * 0.621371;
 
@@ -145,35 +139,26 @@ export const BaseInfoPanel: React.FC<BaseInfoPanelProps> = ({
 
         <Divider />
 
-        {/* Fall Rate + Altitude side-by-side */}
-        <Group grow gap="md" align="flex-start">
-          <Stack gap={2}>
-            <Text size="xs" c="dimmed">Fall Rate</Text>
-            <Text size="sm" fw={500}>
-              {actualFallRate.toFixed(0)} mph
-            </Text>
-            <Badge
-              color={getFallRateColor(normalizedFallRate)}
-              size="sm"
-              variant="light"
+        {/* Altitude AGL */}
+        <Group justify="space-between" align="center" wrap="nowrap">
+          <Text size="xs" c="dimmed">Altitude</Text>
+          <Group gap={6} align="baseline" wrap="nowrap">
+            <Text
+              style={{
+                fontFamily: 'var(--font-geist-mono), monospace',
+                fontSize: 32,
+                lineHeight: 1,
+                fontWeight: 600,
+                color: 'var(--mantine-primary-color-filled)',
+              }}
             >
-              {normalizedFallRate.toFixed(0)} cal
+              {displayAltAGL != null ? Math.round(displayAltAGL).toLocaleString() : '---'}
+            </Text>
+            <Text size="xs" c="dimmed">ft, AGL</Text>
+            <Badge size="xs" variant="light" color="gray">
+              {altitudeSourceLabel}
             </Badge>
-          </Stack>
-
-          <Stack gap={2}>
-            <Text size="xs" c="dimmed">
-              Altitude ({altitudeMode === 'Barometric' ? 'Baro' : 'GPS'})
-            </Text>
-            <Text size="sm" fw={500}>
-              {baroAlt?.toFixed(0) ?? '---'} ft
-            </Text>
-            {altitudeAGL != null && altitudeMode !== 'Barometric' && (
-              <Text size="xs" c="dimmed">
-                GPS: {altitudeAGL.toFixed(0)} ft
-              </Text>
-            )}
-          </Stack>
+          </Group>
         </Group>
 
         <Divider />
