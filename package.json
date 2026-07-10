@@ -21,6 +21,7 @@
     "@mantine/hooks": "^8.3.2",
     "@mantine/notifications": "^8.3.2",
     "@tabler/icons-react": "^3.34.1",
+    "maplibre-gl": "^4.7.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^3.1.2",
@@ -37,6 +38,9 @@
       "optional": true
     },
     "@tabler/icons-react": {
+      "optional": true
+    },
+    "maplibre-gl": {
       "optional": true
     },
     "react": {
@@ -64,6 +68,7 @@
     "@types/react-dom": "^19",
     "@types/three": "^0.180.0",
     "jest": "^30.3.0",
+    "maplibre-gl": "^4.7.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "recharts": "^3.8.1",

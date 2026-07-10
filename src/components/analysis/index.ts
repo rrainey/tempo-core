@@ -5,3 +5,4 @@ export type { DisplayMode } from './VelocityBinChart';
 export { FallRateChart } from './FallRateChart';
 export type { FallRateSeriesPoint } from './FallRateChart';
 export { JumpAltitudeChart } from './JumpAltitudeChart';
+export { GNSSPathMap } from './GNSSPathMap';
