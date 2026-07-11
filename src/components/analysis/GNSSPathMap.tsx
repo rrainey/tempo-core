@@ -36,6 +36,12 @@ import {
 // heavier workloads: https://operations.osmfoundation.org/policies/tiles/
 const DEFAULT_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
+// Stable default for `overlays`: an inline `= []` default would be a fresh array
+// reference on every render, and `overlays` is a dependency of the map-init
+// effect — the map would be destroyed and recreated in an endless loop, never
+// painting a frame (and re-fetching tiles continuously).
+const NO_OVERLAYS: GeoJSONFeatureCollection[] = [];
+
 interface GNSSPathMapProps {
   gpsData: GPSPoint[];
   exitOffsetSec?: number;
@@ -59,7 +65,7 @@ export function GNSSPathMap({
   exitOffsetSec,
   deploymentOffsetSec,
   landingOffsetSec,
-  overlays = [],
+  overlays = NO_OVERLAYS,
   tileUrl = DEFAULT_TILE_URL
 }: GNSSPathMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
