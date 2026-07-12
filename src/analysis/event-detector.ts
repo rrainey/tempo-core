@@ -253,8 +253,10 @@ export class EventDetector {
   }
 
   /**
-   * Detect landing
-   * Landing is RoD <100 fpm for 10s
+   * Detect landing (coarse)
+   * First post-deployment sample within ±100 ft baro AGL whose altitude
+   * stays inside a ±20 ft band for at least 20 s. Precision is a few
+   * seconds; refineLandingWithIMU() sharpens it to the touchdown impulse.
    */
   static detectLanding(data: ParsedLogData, deploymentOffset_sec: number  ): { offsetSec?: number } {
     const { logEntries } = data;
@@ -310,6 +312,88 @@ export class EventDetector {
   }
 
   /**
+   * Refine a coarse landing time using the IMU.
+   *
+   * Touchdown is an impulsive burst in acceleration-magnitude variability:
+   * the rolling ~0.5 s standard deviation jumps from the canopy/flare
+   * baseline (flare is high-LOAD but smooth, sd ≲ 2 m/s²) to 4–6 m/s² at
+   * the impact and the run-out. We search ±8 s around the coarse estimate
+   * for the first sustained crossing of a robust threshold derived from
+   * the pre-landing baseline (median + 4·MAD, floored at 2.5 m/s²).
+   * First-crossing matters: the global variance maximum is often the
+   * run-out or canopy gathering, seconds after touchdown.
+   *
+   * Returns the coarse time unchanged when IMU evidence is absent or
+   * inconclusive — refinement never degrades the estimate.
+   */
+  static refineLandingWithIMU(data: ParsedLogData, coarseLanding_sec: number): number {
+    const WINDOW_S = 8;         // search span around the coarse estimate
+    const BASELINE_START_S = 15; // baseline region: [coarse-15, coarse-5]
+    const BASELINE_END_S = 5;
+    const ROLL_HALF_S = 0.25;   // rolling-std half-window (~0.5 s total)
+    const K_MAD = 4;            // threshold: baseline median + K·(1.4826·MAD)
+    const THRESHOLD_FLOOR_MPS2 = 2.5; // never trigger below flare-level variability
+    const SUSTAIN_SAMPLES = 2;  // consecutive scored samples above threshold
+
+    const acc = data.acceleration;
+    const regionStart = coarseLanding_sec - BASELINE_START_S;
+    const regionEnd = coarseLanding_sec + WINDOW_S;
+    const region = acc.filter(
+      p => p.timestamp >= regionStart && p.timestamp <= regionEnd && Number.isFinite(p.value)
+    );
+    if (region.length < 20) {
+      return coarseLanding_sec; // too little IMU data to judge
+    }
+
+    const rollingStd = (t: number): number | null => {
+      const seg = region.filter(p => Math.abs(p.timestamp - t) <= ROLL_HALF_S);
+      if (seg.length < 3) return null;
+      const mean = seg.reduce((a, p) => a + p.value, 0) / seg.length;
+      return Math.sqrt(seg.reduce((a, p) => a + (p.value - mean) ** 2, 0) / seg.length);
+    };
+
+    const median = (xs: number[]): number => {
+      const s = [...xs].sort((a, b) => a - b);
+      const m = Math.floor(s.length / 2);
+      return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+    };
+
+    const baselineScores = region
+      .filter(p => p.timestamp <= coarseLanding_sec - BASELINE_END_S)
+      .map(p => rollingStd(p.timestamp))
+      .filter((s): s is number => s !== null);
+    if (baselineScores.length < 8) {
+      return coarseLanding_sec;
+    }
+
+    const baseMedian = median(baselineScores);
+    const baseMAD = median(baselineScores.map(s => Math.abs(s - baseMedian)));
+    const threshold = Math.max(baseMedian + K_MAD * 1.4826 * baseMAD, THRESHOLD_FLOOR_MPS2);
+
+    const windowSamples = region.filter(p => p.timestamp >= coarseLanding_sec - WINDOW_S);
+    let streak = 0;
+    let crossing: number | null = null;
+    for (const p of windowSamples) {
+      const score = rollingStd(p.timestamp);
+      if (score === null) continue;
+      if (score > threshold) {
+        if (streak === 0) crossing = p.timestamp;
+        streak += 1;
+        if (streak >= SUSTAIN_SAMPLES && crossing !== null) {
+          console.log(`[EVENT DETECTOR] Landing refined by IMU: ${coarseLanding_sec.toFixed(1)}s -> ${crossing.toFixed(1)}s (threshold ${threshold.toFixed(2)} m/s²)`);
+          return crossing;
+        }
+      } else {
+        streak = 0;
+        crossing = null;
+      }
+    }
+
+    console.log('[EVENT DETECTOR] No IMU touchdown signature found; keeping coarse landing time');
+    return coarseLanding_sec;
+  }
+
+  /**
    * Calculate magnitude of a 3D vector
    */
   private static vectorMagnitude(v: Vector3): number {
@@ -339,10 +423,10 @@ export class EventDetector {
       events.deployAltitudeFt = deployment.deployAltitudeFt;
     }
 
-    // Detect landing
+    // Detect landing: coarse baro-stability estimate, then IMU touchdown refinement
     const landing = this.detectLanding(data, events.deploymentOffsetSec || 30.0);
     if (landing.offsetSec !== undefined) {
-      events.landingOffsetSec = landing.offsetSec;
+      events.landingOffsetSec = this.refineLandingWithIMU(data, landing.offsetSec);
     }
 
     // Find max descent rate and peak acceleration during freefall

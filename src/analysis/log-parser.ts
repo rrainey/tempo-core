@@ -120,15 +120,13 @@ export class LogParser {
 
       let hasGPS = false;
 
-      // Surface references for per-point AGL, each system against itself:
-      // baro AGL is referenced to the $PSFC surface pressure altitude; GNSS
-      // AGL to a robust ground estimate — the 5th percentile of the log's
-      // GNSS altitudes (covers ground time before boarding and after
+      // Per-point AGL, each system referenced against itself. Baro:
+      // entry.baroAlt_ft is ALREADY AGL — DropkickReader subtracts the $PSFC
+      // surface pressure altitude when building the ENV series. GNSS: GGA
+      // altitude minus a robust ground estimate — the 5th percentile of the
+      // log's GNSS altitudes (covers ground time before boarding and after
       // landing, and rides out fix noise). The reader's
       // dzSurfaceGPSAltitude_m is never populated, so it can't be used here.
-      const baroSurface_ft = Number.isFinite(reader.dzSurfacePressureAltitude_m)
-        ? this.metersToFeet(reader.dzSurfacePressureAltitude_m)
-        : null;
       const sortedGnssAlts_m = logEntries
         .filter(e => e.location !== null)
         .map(e => e.location!.alt_m)
@@ -170,8 +168,8 @@ export class LogParser {
             gnssAlt_ftAGL: gnssSurface_m !== null
               ? this.metersToFeet(entry.location.alt_m - gnssSurface_m)
               : undefined,
-            baroAlt_ftAGL: baroSurface_ft !== null && entry.baroAlt_ft !== null
-              ? entry.baroAlt_ft - baroSurface_ft
+            baroAlt_ftAGL: entry.baroAlt_ft !== null && Number.isFinite(entry.baroAlt_ft)
+              ? entry.baroAlt_ft
               : undefined,
             groundspeed_kmph: entry.groundspeed_kmph ?? undefined,
             groundTrack_degT: entry.groundtrack_degT ?? undefined
