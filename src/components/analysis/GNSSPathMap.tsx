@@ -22,6 +22,7 @@ import {
   gpsToPointFeatures,
   segmentByPhase,
   calculateBounds,
+  calculateDescentBounds,
   calculateCenter,
   formatGroundspeed,
   getPhaseLabel
@@ -237,11 +238,15 @@ export function GNSSPathMap({
         }
       });
 
-      // Fit bounds to data
-      const bounds = calculateBounds(gpsData);
+      // Initial view: focus on the descent (freefall + canopy) when jump
+      // phases are known; otherwise frame the full track. Padding gives a
+      // ~15%-of-map-edge margin around the framed extents.
+      const bounds =
+        calculateDescentBounds(gpsData, exitOffsetSec, landingOffsetSec) ??
+        calculateBounds(gpsData);
       if (bounds) {
         map.fitBounds(bounds as [number, number, number, number], {
-          padding: 50,
+          padding: Math.round(map.getContainer().clientWidth * 0.15),
           maxZoom: 16
         });
       }
@@ -299,16 +304,22 @@ export function GNSSPathMap({
       );
     }
 
-    // Fit bounds to filtered data
-    const bounds = calculateBounds(filteredData);
+    // Fit bounds to the selection. "All" keeps the descent-focused framing
+    // (falling back to the full track when phases are unknown) so it matches
+    // the initial view; specific phases frame just their own points.
+    const bounds =
+      selectedPhase === 'all'
+        ? calculateDescentBounds(gpsData, exitOffsetSec, landingOffsetSec) ??
+          calculateBounds(gpsData)
+        : calculateBounds(filteredData);
     if (bounds && filteredData.length > 1) {
       map.fitBounds(bounds as [number, number, number, number], {
-        padding: 50,
+        padding: Math.round(map.getContainer().clientWidth * 0.15),
         maxZoom: 16,
         duration: 500
       });
     }
-  }, [phaseSegments, filteredData, mapLoaded, exitOffsetSec, deploymentOffsetSec, landingOffsetSec]);
+  }, [phaseSegments, filteredData, gpsData, selectedPhase, mapLoaded, exitOffsetSec, deploymentOffsetSec, landingOffsetSec]);
 
   // Handle hover events
   useEffect(() => {
@@ -457,7 +468,7 @@ export function GNSSPathMap({
             ref={mapContainerRef}
             style={{
               width: '100%',
-              height: '400px',
+              aspectRatio: '1 / 1',
               borderRadius: '8px',
               overflow: 'hidden'
             }}

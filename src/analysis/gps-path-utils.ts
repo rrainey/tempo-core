@@ -199,6 +199,34 @@ export function calculateBounds(gpsData: GPSPoint[]): [number, number, number, n
 }
 
 /**
+ * Bounding box of the descent portion of the jump (freefall + canopy):
+ * points from exit until landing, or until the end of the log when no
+ * landing offset is available. Returns null when there is no exit offset
+ * or too few descent points to frame — callers should fall back to the
+ * full-track bounds.
+ */
+export function calculateDescentBounds(
+  gpsData: GPSPoint[],
+  exitOffset?: number,
+  landingOffset?: number
+): [number, number, number, number] | null {
+  if (exitOffset === undefined) {
+    return null;
+  }
+
+  const descent = gpsData.filter(
+    p =>
+      p.timestamp >= exitOffset &&
+      (landingOffset === undefined || p.timestamp <= landingOffset)
+  );
+  if (descent.length < 2) {
+    return null;
+  }
+
+  return calculateBounds(descent);
+}
+
+/**
  * Calculate center point of GPS data
  */
 export function calculateCenter(gpsData: GPSPoint[]): [number, number] | null {
