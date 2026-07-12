@@ -102,6 +102,8 @@ export function gpsToPointFeatures(
         groundspeed_kmph: point.groundspeed_kmph ?? null,
         groundspeed_mph: point.groundspeed_kmph ? kmphToMph(point.groundspeed_kmph) : null,
         altitude: point.altitude_ftAGL,
+        gnssAlt_ftAGL: point.gnssAlt_ftAGL ?? null,
+        baroAlt_ftAGL: point.baroAlt_ftAGL ?? null,
         heading: point.groundTrack_degT ?? null,
         phase
       },

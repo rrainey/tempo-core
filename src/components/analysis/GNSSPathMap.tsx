@@ -37,6 +37,10 @@ import {
 // heavier workloads: https://operations.osmfoundation.org/policies/tiles/
 const DEFAULT_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
+function formatAltitudeAGL(feet: number | null): string {
+  return feet !== null ? `${Math.round(feet).toLocaleString()} ft AGL` : '—';
+}
+
 // Stable default for `overlays`: an inline `= []` default would be a fresh array
 // reference on every render, and `overlays` is a dependency of the map-init
 // effect — the map would be destroyed and recreated in an endless loop, never
@@ -57,8 +61,8 @@ interface HoverInfo {
   x: number;
   y: number;
   groundspeed: string;
-  phase: JumpPhase;
-  altitude: number;
+  gnssAltAGL: number | null;
+  baroAltAGL: number | null;
 }
 
 export function GNSSPathMap({
@@ -343,8 +347,8 @@ export function GNSSPathMap({
           x: e.point.x,
           y: e.point.y,
           groundspeed: formatGroundspeed(props?.groundspeed_kmph),
-          phase: props?.phase as JumpPhase || 'all',
-          altitude: props?.altitude || 0
+          gnssAltAGL: typeof props?.gnssAlt_ftAGL === 'number' ? props.gnssAlt_ftAGL : null,
+          baroAltAGL: typeof props?.baroAlt_ftAGL === 'number' ? props.baroAlt_ftAGL : null
         });
       } else {
         map.getCanvas().style.cursor = '';
@@ -493,17 +497,12 @@ export function GNSSPathMap({
                 <Group gap="xs">
                   <Text size="sm" fw={600}>{hoverInfo.groundspeed}</Text>
                 </Group>
-                <Group gap={4}>
-                  <div
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      backgroundColor: getPhaseColor(hoverInfo.phase)
-                    }}
-                  />
-                  <Text size="xs" c="dimmed">{getPhaseLabel(hoverInfo.phase)}</Text>
-                </Group>
+                <Text size="xs" c="dimmed">
+                  GNSS: {formatAltitudeAGL(hoverInfo.gnssAltAGL)}
+                </Text>
+                <Text size="xs" c="dimmed">
+                  Baro: {formatAltitudeAGL(hoverInfo.baroAltAGL)}
+                </Text>
               </Stack>
             </Paper>
           )}

@@ -12,6 +12,8 @@ export interface GPSPoint {
   latitude: number;   // Degrees, positive north
   longitude: number;  // Degrees, positive east
   altitude_ftAGL: number; // feet, AGL (barometric preferred)
+  gnssAlt_ftAGL?: number; // feet above the GNSS-estimated DZ surface (see parse())
+  baroAlt_ftAGL?: number; // feet above the $PSFC surface pressure altitude
   groundspeed_kmph?: number; // Ground speed in km/h (from VTG)
   groundTrack_degT?: number; // Ground track heading in degrees wrt True North (from VTG)
 }
@@ -118,6 +120,23 @@ export class LogParser {
 
       let hasGPS = false;
 
+      // Surface references for per-point AGL, each system against itself:
+      // baro AGL is referenced to the $PSFC surface pressure altitude; GNSS
+      // AGL to a robust ground estimate — the 5th percentile of the log's
+      // GNSS altitudes (covers ground time before boarding and after
+      // landing, and rides out fix noise). The reader's
+      // dzSurfaceGPSAltitude_m is never populated, so it can't be used here.
+      const baroSurface_ft = Number.isFinite(reader.dzSurfacePressureAltitude_m)
+        ? this.metersToFeet(reader.dzSurfacePressureAltitude_m)
+        : null;
+      const sortedGnssAlts_m = logEntries
+        .filter(e => e.location !== null)
+        .map(e => e.location!.alt_m)
+        .sort((a, b) => a - b);
+      const gnssSurface_m = sortedGnssAlts_m.length >= 20
+        ? sortedGnssAlts_m[Math.floor(sortedGnssAlts_m.length * 0.05)]
+        : null;
+
       for (const entry of logEntries) {
         // Use barometric altitude for altitude time series
         if (entry.baroAlt_ft !== null) {
@@ -148,6 +167,12 @@ export class LogParser {
             longitude: entry.location.lon_deg,
             altitude_ftAGL: entry.baroAlt_ft !== null ? entry.baroAlt_ft :
                      this.metersToFeet(entry.location.alt_m), // Fallback to GPS altitude if no baro
+            gnssAlt_ftAGL: gnssSurface_m !== null
+              ? this.metersToFeet(entry.location.alt_m - gnssSurface_m)
+              : undefined,
+            baroAlt_ftAGL: baroSurface_ft !== null && entry.baroAlt_ft !== null
+              ? entry.baroAlt_ft - baroSurface_ft
+              : undefined,
             groundspeed_kmph: entry.groundspeed_kmph ?? undefined,
             groundTrack_degT: entry.groundtrack_degT ?? undefined
           });
