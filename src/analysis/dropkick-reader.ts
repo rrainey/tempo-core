@@ -5,6 +5,8 @@ import { KMLWriter } from './kml-writer'
 //import { getPackedSettings } from "http2";
 import * as egm96 from 'egm96-universal'
 import { FEETtoMETERS, METERStoFEET, interp1 } from "./dropkick-tools";
+import { splitNmeaLine, hasValidNmeaChecksum } from './nmea-hygiene';
+export { splitNmeaLine, hasValidNmeaChecksum } from './nmea-hygiene';
 
 export interface GeodeticCoordinates {
 	lat_deg: number,
@@ -307,6 +309,7 @@ export class DropkickReader {
 		this.stateTransitions = [];
 		this.lastDeviceState = 'LOGGING';
 		this.im2Packets = [];
+		this.rejectedSentenceCount = 0;
 
 	}
 
@@ -354,6 +357,7 @@ export class DropkickReader {
 	stateTransitions: DeviceStateTransition[];	// $PST state transitions (e.g. LOGGING→JUMPED)
 	lastDeviceState: string;
 	im2Packets: IM2Packet[];					// $PIM2 AHRS quaternion packets (20Hz)
+	rejectedSentenceCount: number;				// malformed / checksum-failed sentences dropped
 
 
 	// Experimental; not fully implemented
@@ -396,6 +400,29 @@ export class DropkickReader {
 		return kml.generate(name, name, this.startDate, this.endDate, this.logEntries);
 	}
 
+	/*
+	 * We'll build a stream of position reports, each one triggered by a logged RMC record.
+	 * Intermediate record types (GGA, VTG, $PIMU, $PIM2, $PENV) will be used to add details.
+	 * This ends up being a simplified log, but captures the detail needed for graph rendering.
+	 *
+	 * Ingestion is NMEA-0183-strict: '$' is the reserved start-of-sentence
+	 * delimiter and may not appear in a sentence body, so an interior '$' is a
+	 * RESYNC point — the truncated sentence before it is abandoned and parsing
+	 * restarts (this recovers the intact second sentence when the firmware's
+	 * write-behind buffer drops bytes mid-line and two sentences fuse). Every
+	 * candidate must then carry a checksum that validates against its content;
+	 * anything else is rejected and counted, never parsed.
+	 */
+	onData(line: string): void {
+		for (const sentence of splitNmeaLine(line)) {
+			if (!hasValidNmeaChecksum(sentence)) {
+				this.rejectedSentenceCount++;
+				continue;
+			}
+			this.processSentence(sentence);
+		}
+	}
+
 	appendChecksumIfMissing(line: string): string {
 
 		let res: string = line;
@@ -431,12 +458,9 @@ export class DropkickReader {
 		return res;
 	}
 
-	/*
-	 * We'll build a stream of position reports, each one triggered by a logged RMC record.
-	 * Intermediate record types (GGA, VTG, $PIMU, $PIM2, $PENV) will be used to add details.
-	 * This ends up being a simplified log, but captures the detail needed for graph rendering.
-	 */
-	onData(line: string): void {
+	/** One validated sentence: renamed namespace, recomputed checksum, parsed,
+	 *  and fed to the state machine. Only reachable via onData()'s validation. */
+	private processSentence(line: string): void {
 
 		const patched: string = this.appendChecksumIfMissing(line);
 
@@ -554,16 +578,19 @@ export class DropkickReader {
 						if (this.curEntry.timestamp) {
 							this.endDate = this.curEntry.timestamp;
 							this.curEntry.seq = this.seq++;
-							this.curEntry.accel_mps2 = {
-								x: this.acc.x / this.numImuSamples,
-								y: this.acc.y / this.numImuSamples,
-								z: this.acc.z / this.numImuSamples
-							};
-							this.curEntry.rot_rps = {
-								x: this.rot.x / this.numImuSamples,
-								y: this.rot.y / this.numImuSamples,
-								z: this.rot.z / this.numImuSamples
-							};
+							// no IMU samples this interval → leave null (0/0 = NaN otherwise)
+							if (this.numImuSamples > 0) {
+								this.curEntry.accel_mps2 = {
+									x: this.acc.x / this.numImuSamples,
+									y: this.acc.y / this.numImuSamples,
+									z: this.acc.z / this.numImuSamples
+								};
+								this.curEntry.rot_rps = {
+									x: this.rot.x / this.numImuSamples,
+									y: this.rot.y / this.numImuSamples,
+									z: this.rot.z / this.numImuSamples
+								};
+							}
 							this.curEntry.peakAccel_mps2 = this.maxAcc;
 
 							this.logEntries.push( this.curEntry );
@@ -582,6 +609,14 @@ export class DropkickReader {
 						const mag_msp2 = Math.sqrt( packet.accX_mps2 * packet.accX_mps2 +
 							packet.accY_mps2 * packet.accY_mps2 +
 							packet.accZ_mps2 * packet.accZ_mps2);
+
+						// Defense in depth behind the checksum gate: a sample that
+						// parsed to non-finite values must never poison the
+						// per-entry accumulator averages.
+						if (!Number.isFinite(mag_msp2)) {
+							this.rejectedSentenceCount++;
+							break;
+						}
 
 						this.acc.x += packet.accX_mps2;
 						this.acc.y += packet.accY_mps2;
