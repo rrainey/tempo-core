@@ -31,6 +31,9 @@ interface FallRateChartProps {
   deploymentOffsetSec?: number;
   landingOffsetSec?: number;
   analysisWindow?: { startOffset: number; endOffset: number };
+  /** X-axis caption; pass e.g. "Time since exit (seconds)" when the data is
+   *  in the jump-elapsed time base. */
+  timeAxisLabel?: string;
 }
 
 const RAW_COLOR = '#0088ff';
@@ -43,6 +46,7 @@ export function FallRateChart({
   deploymentOffsetSec,
   landingOffsetSec,
   analysisWindow,
+  timeAxisLabel = 'Time (seconds)',
 }: FallRateChartProps) {
   const terminalVelocityTime = useMemo<number | null>(() => {
     for (const p of data) {
@@ -137,7 +141,7 @@ export function FallRateChart({
             stroke="#c5c0c9"
             domain={['dataMin', 'dataMax']}
             label={{
-              value: 'Time (seconds)',
+              value: timeAxisLabel,
               position: 'insideBottom',
               offset: -10,
               style: { fill: '#c5c0c9' },

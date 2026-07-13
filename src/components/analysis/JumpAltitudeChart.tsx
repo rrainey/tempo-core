@@ -30,6 +30,9 @@ interface JumpAltitudeChartProps {
   deploymentOffsetSec?: number;
   landingOffsetSec?: number;
   showVSpeed?: boolean;
+  /** X-axis caption; pass e.g. "Time since exit (seconds)" when the data is
+   *  in the jump-elapsed time base. */
+  timeAxisLabel?: string;
 }
 
 export function JumpAltitudeChart({
@@ -38,7 +41,8 @@ export function JumpAltitudeChart({
   exitOffsetSec,
   deploymentOffsetSec,
   landingOffsetSec,
-  showVSpeed = false
+  showVSpeed = false,
+  timeAxisLabel = 'Time (seconds)'
 }: JumpAltitudeChartProps) {
   
   // Prepare chart data
@@ -77,11 +81,13 @@ export function JumpAltitudeChart({
     
     // Mark events
     data.forEach(point => {
-      if (exitOffsetSec && Math.abs(point.time - exitOffsetSec) < 0.5) {
+      // NOTE: `!== undefined`, not truthiness — under the jump-elapsed time
+      // base the exit offset is exactly 0 and must still mark.
+      if (exitOffsetSec !== undefined && Math.abs(point.time - exitOffsetSec) < 0.5) {
         point.event = 'exit';
-      } else if (deploymentOffsetSec && Math.abs(point.time - deploymentOffsetSec) < 0.5) {
+      } else if (deploymentOffsetSec !== undefined && Math.abs(point.time - deploymentOffsetSec) < 0.5) {
         point.event = 'deploy';
-      } else if (landingOffsetSec && Math.abs(point.time - landingOffsetSec) < 0.5) {
+      } else if (landingOffsetSec !== undefined && Math.abs(point.time - landingOffsetSec) < 0.5) {
         point.event = 'landing';
       }
     });
@@ -181,9 +187,9 @@ export function JumpAltitudeChart({
 
   // Calculate label positions to avoid overlap
   const eventAltitudes = {
-    exit: exitOffsetSec ? getAltitudeAtTime(exitOffsetSec) : 0,
-    deploy: deploymentOffsetSec ? getAltitudeAtTime(deploymentOffsetSec) : 0,
-    landing: landingOffsetSec ? getAltitudeAtTime(landingOffsetSec) : 0,
+    exit: exitOffsetSec !== undefined ? getAltitudeAtTime(exitOffsetSec) : 0,
+    deploy: deploymentOffsetSec !== undefined ? getAltitudeAtTime(deploymentOffsetSec) : 0,
+    landing: landingOffsetSec !== undefined ? getAltitudeAtTime(landingOffsetSec) : 0,
   };
 
   // Determine label positions (offset from lines to avoid overlap)
@@ -227,7 +233,7 @@ export function JumpAltitudeChart({
             dataKey="time"
             stroke="#c5c0c9"
             label={{
-              value: 'Time (seconds)',
+              value: timeAxisLabel,
               position: 'insideBottom',
               offset: -10,
               style: { fill: '#c5c0c9' },
@@ -251,7 +257,7 @@ export function JumpAltitudeChart({
           />
           
           {/* Event markers */}
-          {exitOffsetSec && (
+          {exitOffsetSec !== undefined && (
             <ReferenceLine
               x={exitOffsetSec}
               stroke="#00ff88"
@@ -267,7 +273,7 @@ export function JumpAltitudeChart({
               />
             </ReferenceLine>
           )}
-          {deploymentOffsetSec && (
+          {deploymentOffsetSec !== undefined && (
             <ReferenceLine
               x={deploymentOffsetSec}
               stroke="#ffaa00"
@@ -283,7 +289,7 @@ export function JumpAltitudeChart({
               />
             </ReferenceLine>
           )}
-          {landingOffsetSec && (
+          {landingOffsetSec !== undefined && (
             <ReferenceLine
               x={landingOffsetSec}
               stroke="#ff3355"

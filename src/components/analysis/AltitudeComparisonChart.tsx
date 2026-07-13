@@ -28,6 +28,9 @@ interface AltitudeComparisonChartProps {
   gpsAltitudeData: TimeSeriesPoint[];
   staticPressureData: TimeSeriesPoint[];
   dzSurfacePressureAltitude_m: number;
+  /** X-axis caption; pass e.g. "Time since exit (seconds)" when the data is
+   *  in the jump-elapsed time base. */
+  timeAxisLabel?: string;
 }
 
 export function AltitudeComparisonChart({
@@ -35,6 +38,7 @@ export function AltitudeComparisonChart({
   gpsAltitudeData,
   staticPressureData,
   dzSurfacePressureAltitude_m,
+  timeAxisLabel = 'Time (seconds)',
 }: AltitudeComparisonChartProps) {
   const dzElevation_ft = dzSurfacePressureAltitude_m * METERS_TO_FEET;
 
@@ -207,7 +211,7 @@ export function AltitudeComparisonChart({
             stroke="#c5c0c9"
             domain={['dataMin', 'dataMax']}
             label={{
-              value: 'Time (seconds)',
+              value: timeAxisLabel,
               position: 'insideBottom',
               offset: -10,
               style: { fill: '#c5c0c9' },

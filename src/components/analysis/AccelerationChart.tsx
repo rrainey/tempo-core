@@ -29,6 +29,9 @@ interface AccelerationChartProps {
   exitOffsetSec?: number;
   deploymentOffsetSec?: number;
   landingOffsetSec?: number;
+  /** X-axis caption; pass e.g. "Time since exit (seconds)" when the data is
+   *  in the jump-elapsed time base. */
+  timeAxisLabel?: string;
 }
 
 export function AccelerationChart({
@@ -36,6 +39,7 @@ export function AccelerationChart({
   exitOffsetSec,
   deploymentOffsetSec,
   landingOffsetSec,
+  timeAxisLabel = 'Time (seconds)',
 }: AccelerationChartProps) {
   const chartData = useMemo(() => {
     const data: ChartDataPoint[] = accelerationData.map(pt => ({
@@ -125,7 +129,7 @@ export function AccelerationChart({
             stroke="#c5c0c9"
             domain={['dataMin', 'dataMax']}
             label={{
-              value: 'Time (seconds)',
+              value: timeAxisLabel,
               position: 'insideBottom',
               offset: -10,
               style: { fill: '#c5c0c9' },
