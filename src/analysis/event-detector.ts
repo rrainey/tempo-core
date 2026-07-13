@@ -312,6 +312,82 @@ export class EventDetector {
   }
 
   /**
+   * Refine a coarse exit time using the IMU.
+   *
+   * The exit signature in acceleration magnitude is a falling edge: ~1 g
+   * inside the aircraft (9.5–11 m/s² with climb-out jostle), then a cliff
+   * to 3.5–6 m/s² as the jumper leaves (low airspeed, gravity dominant),
+   * slowly rebuilding toward 1 g as terminal approaches. The coarse
+   * detectors are late-biased ($PST lags the door; GNSS rate-of-descent
+   * confirmation lags further), so we search a window biased earlier for
+   * the departure edge: the first drop below the aircraft's ~1 g regime
+   * that does not recover (brief turbulence dips recover within seconds;
+   * an exit never does).
+   *
+   * Returns the coarse time unchanged when no clean edge exists in the
+   * window (e.g., the whole window is already sub-G because the coarse
+   * estimate was very late, or IMU data is missing).
+   */
+  static refineExitWithIMU(data: ParsedLogData, coarseExit_sec: number): number {
+    const WINDOW_BEFORE_S = 12; // coarse estimates run late, so look mostly backward
+    const WINDOW_AFTER_S = 4;
+    const ROLL_HALF_S = 0.5;    // ~1 s rolling mean (smooths climb-out jostle)
+    const NEAR_1G_MPS2 = 8.5;   // "still in the aircraft" level (~0.87 g)
+    const HOLD_S = 4.0;         // the drop must not recover within this span
+    const DEPTH_MEAN_MPS2 = 7.5; // ...and must average a real unload (formation
+                                 // exits bottom out ~6-7.5, solos ~4-5)
+
+    const winStart = coarseExit_sec - WINDOW_BEFORE_S;
+    const winEnd = coarseExit_sec + WINDOW_AFTER_S;
+    const region = data.acceleration.filter(
+      p => p.timestamp >= winStart && p.timestamp <= winEnd && Number.isFinite(p.value)
+    );
+    if (region.length < 30) {
+      return coarseExit_sec; // too little IMU data to judge
+    }
+
+    // Tolerates sparse sampling: some logs record IMU at ~1 Hz until the
+    // device detects freefall and switches to 10 Hz — exactly at the edge
+    // we're looking for. A single sample in the window is still a score.
+    const rollMean = (t: number): number | null => {
+      const seg = region.filter(p => Math.abs(p.timestamp - t) <= ROLL_HALF_S);
+      if (seg.length === 0) return null;
+      return seg.reduce((a, p) => a + p.value, 0) / seg.length;
+    };
+
+    const scored = region
+      .map(p => ({ t: p.timestamp, m: rollMean(p.timestamp) }))
+      .filter((s): s is { t: number; m: number } => s.m !== null);
+
+    // Edge-first search: the exit is the first departure below the aircraft
+    // regime that never recovers. Brief turbulence dips recover within a
+    // second or two; a formation exit's hill can hover at 6-7.5 m/s² (never
+    // reaching a solo's quiet 4-5), so we test recovery and average depth
+    // over the following HOLD_S rather than requiring a deep sustained run.
+    let sawAircraft = false;
+    for (let i = 0; i < scored.length; i++) {
+      const s = scored[i];
+      if (s.m >= NEAR_1G_MPS2) {
+        sawAircraft = true;
+        continue;
+      }
+      if (!sawAircraft) continue; // window opened already sub-G; need a visible edge
+      const hold = scored.filter(x => x.t >= s.t && x.t <= s.t + HOLD_S);
+      const span = hold.length ? hold[hold.length - 1].t - hold[0].t : 0;
+      if (hold.length < 3 || span < HOLD_S * 0.6) continue; // ran off the window
+      const recovers = hold.some(x => x.m >= NEAR_1G_MPS2);
+      const depth = hold.reduce((a, x) => a + x.m, 0) / hold.length;
+      if (!recovers && depth < DEPTH_MEAN_MPS2) {
+        console.log(`[EVENT DETECTOR] Exit refined by IMU: ${coarseExit_sec.toFixed(1)}s -> ${s.t.toFixed(1)}s`);
+        return s.t;
+      }
+    }
+
+    console.log('[EVENT DETECTOR] No non-recovering sub-G edge near coarse exit; keeping coarse exit time');
+    return coarseExit_sec;
+  }
+
+  /**
    * Refine a coarse landing time using the IMU.
    *
    * Touchdown is an impulsive burst in acceleration-magnitude variability:
@@ -406,14 +482,24 @@ export class EventDetector {
   static analyzeJump(data: ParsedLogData): JumpEvents {
     const events: JumpEvents = {};
 
-    // Detect exit
+    // Detect exit: coarse ($PST/RoD) estimate, then IMU departure-edge refinement
     const exit = this.detectExit(data);
     if (exit.offsetSec !== undefined) {
-      events.exitOffsetSec = exit.offsetSec;
+      const refinedExit = this.refineExitWithIMU(data, exit.offsetSec);
+      events.exitOffsetSec = refinedExit;
       events.exitAltitudeFt = exit.altitudeFt;
       events.exitLatitude = exit.latitude;
       events.exitLongitude = exit.longitude;
-      events.exitTimestampUTC = new Date(data.startTime.getTime() + exit.offsetSec * 1000);
+      if (refinedExit !== exit.offsetSec) {
+        // re-anchor altitude/position to the refined moment
+        const refinedEntry = this.findClosestEntry(data.logEntries, refinedExit);
+        if (refinedEntry) {
+          events.exitAltitudeFt = refinedEntry.baroAlt_ft ?? exit.altitudeFt;
+          events.exitLatitude = refinedEntry.location?.lat_deg ?? exit.latitude;
+          events.exitLongitude = refinedEntry.location?.lon_deg ?? exit.longitude;
+        }
+      }
+      events.exitTimestampUTC = new Date(data.startTime.getTime() + refinedExit * 1000);
     }
 
     // Detect deployment
