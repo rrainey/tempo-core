@@ -6,3 +6,5 @@ export { FallRateChart } from './FallRateChart';
 export type { FallRateSeriesPoint } from './FallRateChart';
 export { JumpAltitudeChart } from './JumpAltitudeChart';
 export { GNSSPathMap } from './GNSSPathMap';
+export { JumpTimeScrubber, computePresetWindows } from './JumpTimeScrubber';
+export type { TimeWindow, PresetWindow } from './JumpTimeScrubber';

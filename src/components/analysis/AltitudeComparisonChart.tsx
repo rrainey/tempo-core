@@ -10,7 +10,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Brush,
 } from 'recharts';
 import { TimeSeriesPoint } from '../../analysis/log-parser';
 
@@ -197,7 +196,7 @@ export function AltitudeComparisonChart({
       </Group>
 
       <Text size="xs" c="dimmed" mb="sm">
-        Use the brush control below the chart to zoom into a time segment.
+        Barometric vs. GNSS altitude; zoom with the time scrubber above the charts.
       </Text>
 
       <ResponsiveContainer width="100%" height={380}>
@@ -257,13 +256,6 @@ export function AltitudeComparisonChart({
             />
           )}
 
-          <Brush
-            dataKey="time"
-            height={30}
-            stroke="#556677"
-            fill="#001a29"
-            tickFormatter={(v) => `${Number(v).toFixed(0)}s`}
-          />
         </LineChart>
       </ResponsiveContainer>
 

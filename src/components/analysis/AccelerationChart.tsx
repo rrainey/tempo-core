@@ -12,7 +12,6 @@ import {
   ReferenceLine,
   ResponsiveContainer,
   Label,
-  Brush,
 } from 'recharts';
 import { TimeSeriesPoint } from '../../analysis/log-parser';
 
@@ -222,13 +221,6 @@ export function AccelerationChart({
             isAnimationActive={false}
           />
 
-          <Brush
-            dataKey="time"
-            height={30}
-            stroke="#556677"
-            fill="#001a29"
-            tickFormatter={(v) => `${Number(v).toFixed(0)}s`}
-          />
         </LineChart>
       </ResponsiveContainer>
     </Card>
