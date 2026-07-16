@@ -7,6 +7,8 @@ import { METERStoFEET } from './dropkick-tools';
 export interface JumpEvents {
   exitOffsetSec?: number;
   deploymentOffsetSec?: number;
+  /** First RoD < 2000 fpm after deployment — canopy flying (slider down). */
+  activationOffsetSec?: number;
   landingOffsetSec?: number;
 
   // Additional event metadata
@@ -507,6 +509,7 @@ export class EventDetector {
     if (deployment.deploymentOffsetSec !== undefined) {
       events.deploymentOffsetSec = deployment.deploymentOffsetSec;
       events.deployAltitudeFt = deployment.deployAltitudeFt;
+      events.activationOffsetSec = deployment.activationOffsetSec;
     }
 
     // Detect landing: coarse baro-stability estimate, then IMU touchdown refinement

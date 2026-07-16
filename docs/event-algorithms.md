@@ -11,7 +11,7 @@ Every Tempo-BT log gives us three independent views of a jump:
 
 - **Barometric altitude** — pressure altitude, converted to AGL by subtracting the
   surface reference the device writes into each log's header (`$PSFC`; captured on
-  the ground pre-boarding — §2, §6). Smooth and dense, but it drifts with the
+  the ground pre-boarding — §2, §7). Smooth and dense, but it drifts with the
   weather like any altimeter you didn't re-zero.
 - **GNSS** (GPS) — position, altitude, groundspeed, and a derived **rate of descent
   (RoD)**. Accurate on average but *laggy*: RoD is computed across position fixes,
@@ -21,7 +21,7 @@ Every Tempo-BT log gives us three independent views of a jump:
   v1.6.0 source and raw v110/v114 logs). A caveat that matters throughout: the
   current *analysis* pipeline resamples the IMU onto the log-entry cadence, which
   follows the GNSS fix rate — effectively ~10 Hz in freefall and as low as 1 Hz on
-  the ground on some device configurations (§6). We use the *magnitude* of the
+  the ground on some device configurations (§7). We use the *magnitude* of the
   acceleration vector, which has a useful physical meaning: about **1 g (9.8 m/s²)** whenever something is holding
   you up (the airplane seat, a flying canopy, the ground), near **0 g** in the first
   seconds off the hill before airspeed builds, back to ~1 g at terminal (drag holds
@@ -81,7 +81,7 @@ A few consequences that matter to the algorithms in this paper:
   device-clock arrival time of that fix — the anchor that lets a log offset be
   converted to a precise UTC time (used for the exit timestamp).
 - Two header sentences open every log: `$PVER` (firmware identity and log-format
-  number) and `$PSFC` (the surface altitude reference discussed in §6).
+  number) and `$PSFC` (the surface altitude reference discussed in §7).
 - There is no battery gauge on this hardware revision — `$PENV`'s trailing field
   is a placeholder (−1.00) — and no temperature is logged.
 
@@ -136,7 +136,7 @@ re-anchored to the refined moment.
 the detector effectively saw 1 Hz data before the exit, a ±1 s resolution
 floor that applies to the hand label as much as to the algorithm. The raw log
 contains full 20 Hz `$PIMU` throughout; consuming it directly is the top item
-in §6.
+in §7.
 
 On formation logs, each device's refined time was verified to sit on that
 device's *own* falling edge; where teammates' refined times agree closely (e.g., a
@@ -165,7 +165,7 @@ analysis pipeline's ~10 Hz resampled signal, so it timestamps the *shock*, not
 the *pitch* — the
 pilot chute launch and snatch sequence precede it by a second or more. And the
 freefall gate inherits the GNSS RoD lag. Both are tractable with the same
-coarse-plus-refine treatment the other two events received (§6).
+coarse-plus-refine treatment the other two events received (§7).
 
 ## 5. Landing
 
@@ -195,7 +195,71 @@ detector's flare bias). On the jump that motivated the work, the refined time
 landed within 0.1 s of a hand-labeled touchdown; the largest shift (+2.8 s) was
 spot-checked and sits on an unambiguous 4.2 g impact spike.
 
-## 6. Potential Future Investigation
+## 6. Abnormal openings: off-heading and line twists
+
+*(Implemented in `opening-anomalies.ts`, on top of the torso-orientation
+estimation in `torso-orientation.ts` — the machinery that turns the logged
+`$PIM2` attitude quaternions into "which way is the jumper's body pointing."
+Requires firmware 1.2.0 or later; older logs recorded attitude in a format we
+can't interpret and are skipped.)*
+
+There are no formal industry definitions for these anomalies, so we state the
+working definitions we detect against:
+
+**Off-heading opening.** The canopy's initial line of flight differs by more
+than **45°** from the heading implied by the jumper's freefall body position.
+"Implied heading" means: picture the belly-flying jumper rotated head-up about
+their hips — the direction they'd then be facing. Geometrically that is the
+horizontal projection of the feet-to-head axis. This definition only makes
+sense off a **stable** body position: if the jumper is spinning or tumbling
+through the seconds before deployment there is no expected heading to be off
+*from*, and the opening is labeled **indeterminate** rather than normal or
+abnormal.
+
+**Line twist.** After deployment the jumper rotates through at least **360° of
+yaw** with little accompanying change in ground track — the canopy flies on
+more or less straight while the jumper winds up beneath it. We split it into
+two classes: **benign** (the spin, but ordinary loads) and **aggressive** (the
+rotation coincides with a sustained net acceleration of **1.5 g or more** —
+the diving, loaded-up variety that demands immediate attention).
+
+**How it's measured.** Three choices matter:
+
+- *Headings are compared torso-to-torso, not against the GPS track.* Wind
+  displaces the ground track of a perfectly on-heading opening — in a 15 mph
+  upper wind a canopy can track 40°+ away from where it is pointing. The
+  jumper hangs facing where the canopy points, so we compare pre-deployment
+  implied heading against post-opening torso heading. A side benefit: a
+  same-sensor difference taken ~30 s apart cancels the slow yaw drift in the
+  device's orientation estimate almost entirely. (The ground-track comparison
+  is still computed and reported as a diagnostic.)
+- *The freefall heading comes from the feet-to-head axis directly.* The usual
+  yaw angle is mathematically ill-defined when you're pitched 90° face-down;
+  the projection of the body axis is not.
+- *Stability gate*: over roughly the 6-to-2 seconds before deployment, the
+  jumper must be belly-ish (mean pitch steeper than −45°) with the implied
+  heading holding within ~15°. Fail any of it → indeterminate (with the
+  reason recorded). Line-twist detection still runs — a spinning deployment
+  can absolutely still twist.
+
+The post-opening heading is read from the **earliest** 2-second window of
+flyable flight after canopy activation (yaw rate under 40°/s — a line-twist
+spin is far faster and excludes itself; searching up to 25 s past
+deployment). Earliest matters: taking a later, quieter window would let a
+jumper's deliberate first turn toward the holding area masquerade as an
+off-heading opening. The twist rotation is measured separately, as the peak
+unwrapped yaw excursion from the moment of deployment until flight is fully
+settled. Loads are a 1-second rolling mean starting at canopy activation,
+deliberately excluding the opening shock and inflation (a hard opening is a
+different anomaly, worth its own definition someday).
+
+**Corpus status.** No documented line-twist or off-heading cases exist in the
+current test corpus, so thresholds are validated against synthetic cases and
+the corpus serves as the false-positive check. Treat the first real flagged
+jumps as calibration data: if experience shows canopies routinely settle 30°
+off without anyone caring, the 45° threshold was cheap to move.
+
+## 7. Potential Future Investigation
 
 *(The firmware statements below were verified against the v1.6.0 source tree
 (`tempo-bt-v1`, commit 65808c3) and against raw v110/v114 logs — including two

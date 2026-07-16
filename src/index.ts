@@ -68,6 +68,13 @@ export {
   type CalibrationWindow,
   type TorsoCalibration,
   type TorsoAttitude,
+  // opening-anomalies
+  analyzeOpening,
+  impliedFreefallHeading_degT,
+  unwrapYaw_deg,
+  type OpeningAnalysis,
+  type OpeningAnalysisOptions,
+  type LineTwistClass,
   // rr-geodesy
   WGS84_MAJOR,
   WGS84_MINOR,
