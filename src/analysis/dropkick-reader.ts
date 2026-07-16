@@ -97,7 +97,7 @@ interface EnvironmentSurfacePacket extends PacketStub<typeof envSurfaceElevation
 
 const imuSentenceId: "_IMU" = "_IMU";
 
-interface IMUPacket extends PacketStub<typeof imuSentenceId> {
+export interface IMUPacket extends PacketStub<typeof imuSentenceId> {
 	timestamp_ms: number;
 	accX_mps2: number;
 	accY_mps2: number;
@@ -105,6 +105,7 @@ interface IMUPacket extends PacketStub<typeof imuSentenceId> {
 	rotX_rps: number;
 	rotY_rps: number;
 	rotZ_rps: number;
+	timeOffset?: number;  // seconds from log start (computed from PTH correlation)
 }
 
 const im2SentenceId: "_IM2" = "_IM2";
@@ -309,6 +310,7 @@ export class DropkickReader {
 		this.stateTransitions = [];
 		this.lastDeviceState = 'LOGGING';
 		this.im2Packets = [];
+		this.imuPackets = [];
 		this.rejectedSentenceCount = 0;
 
 	}
@@ -357,6 +359,7 @@ export class DropkickReader {
 	stateTransitions: DeviceStateTransition[];	// $PST state transitions (e.g. LOGGING→JUMPED)
 	lastDeviceState: string;
 	im2Packets: IM2Packet[];					// $PIM2 AHRS quaternion packets (20Hz)
+	imuPackets: IMUPacket[];					// raw $PIMU accel/gyro packets (20Hz), full rate
 	rejectedSentenceCount: number;				// malformed / checksum-failed sentences dropped
 
 
@@ -624,6 +627,15 @@ export class DropkickReader {
 						this.rot.x += packet.rotX_rps;
 						this.rot.y += packet.rotY_rps;
 						this.rot.z += packet.rotZ_rps;
+
+						// Retain the full-rate vector stream (torso-orientation
+						// estimation needs per-axis samples, not the per-entry
+						// averages accumulated above).
+						{
+							const timeOffset = this.lastTimeOffset_sec +
+								(packet.timestamp_ms - this.lastTimeHackTimestamp_ms + this.timeHackSerialAdjustment_ms) / 1000.0;
+							this.imuPackets.push({ ...packet, timeOffset });
+						}
 
 						if (this.maxAccMag_mps2 < mag_msp2) {
 							this.maxAccMag_mps2 = mag_msp2;

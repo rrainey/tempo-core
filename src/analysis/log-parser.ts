@@ -1,6 +1,6 @@
 // lib/analysis/log-parser.ts
 
-import { DropkickReader, KMLDataV1, GeodeticCoordinates, ReaderState, DeviceStateTransition, IM2Packet } from './dropkick-reader';
+import { DropkickReader, KMLDataV1, GeodeticCoordinates, ReaderState, DeviceStateTransition, IM2Packet, IMUPacket } from './dropkick-reader';
 
 export interface TimeSeriesPoint {
   timestamp: number; // Seconds from log start
@@ -51,6 +51,11 @@ export interface ParsedLogData {
 
   // AHRS quaternion packets (from $PIM2 sentences, 20Hz)
   im2Packets: IM2Packet[];
+
+  // Raw per-axis accel/gyro packets (from $PIMU sentences, 20Hz) — the
+  // full-rate vector stream, unlike `acceleration` (magnitude, resampled
+  // onto GNSS-entry cadence). Torso-orientation estimation needs these.
+  imuPackets: IMUPacket[];
 }
 
 export class LogParser {
@@ -99,6 +104,7 @@ export class LogParser {
           errorMessage: 'No valid entries found in log',
           stateTransitions: [],
           im2Packets: [],
+        imuPackets: [],
         };
       }
 
@@ -226,6 +232,7 @@ export class LogParser {
         dzSurfaceGPSAltitude_m: reader.dzSurfaceGPSAltitude_m,
         stateTransitions: reader.stateTransitions,
         im2Packets: reader.im2Packets,
+        imuPackets: reader.imuPackets,
       };
 
     } catch (error) {
@@ -246,6 +253,7 @@ export class LogParser {
         errorMessage: `Parse error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         stateTransitions: [],
         im2Packets: [],
+        imuPackets: [],
       };
     }
   }
