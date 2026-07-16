@@ -2,6 +2,7 @@ export * from './dropkick-reader';
 export * from './dropkick-tools';
 export * from './event-detector';
 export * from './jump-time';
+export * from './landing-flare';
 export * from './gps-path-utils';
 export * from './rr-geodesy';
 export * from './kml-writer';
