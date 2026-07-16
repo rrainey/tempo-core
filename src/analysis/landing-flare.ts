@@ -14,6 +14,7 @@
 
 import type { GPSPoint, TimeSeriesPoint } from './log-parser';
 import { kmphToMph } from './gps-path-utils';
+import { rotationFromEuler, type TorsoAttitude } from './torso-orientation';
 
 const FT_PER_M = 3.28084;
 const G = 9.81;
@@ -26,9 +27,27 @@ export interface FlareCallout {
   load_g: number | null; // accel magnitude (load factor)
 }
 
+/**
+ * A stick-figure sample between callouts: the torso's up (hips→head) and
+ * chest-forward unit vectors PROJECTED into the chart plane (x = along the
+ * approach, z = up). Projection is deliberately not re-normalized — when the
+ * jumper is yawed off the approach axis (e.g. mid turn) the figure
+ * foreshortens, exactly as a side view should.
+ */
+export interface FlareFigure {
+  t: number;
+  x_ft: number;
+  z_ft: number;
+  up: [number, number];      // torso up, chart plane (|·| ≤ 1)
+  forward: [number, number]; // chest normal, chart plane (|·| ≤ 1)
+}
+
 export interface FlareProfile {
   points: Array<{ t: number; x_ft: number; z_ft: number }>;
   callouts: FlareCallout[];
+  /** Torso figures midway between callouts; present only when the caller
+   *  supplied a torso attitude series (and only where samples exist). */
+  figures?: FlareFigure[];
   approachHeading_degT: number; // mean final ground path, degrees true
   window_s: number;             // seconds of flight before touchdown shown
 }
@@ -38,6 +57,9 @@ interface FlareOptions {
   postS?: number;           // seconds after touchdown to include (default 2)
   calloutCount?: number;    // evenly spaced in time (default 9)
   headingWindowS?: number;  // final segment defining the approach axis (default 6)
+  /** Torso attitude series (log time) from torso-orientation calibration;
+   *  enables the stick figures between callouts. */
+  attitude?: TorsoAttitude[];
 }
 
 /** Linear interpolation of a {timestamp,value} series at time t. */
@@ -145,5 +167,35 @@ export function buildFlareProfile(
     });
   }
 
-  return { points, callouts, approachHeading_degT, window_s: windowS };
+  // Torso stick figures midway between callouts, when attitude is available.
+  let figures: FlareFigure[] | undefined;
+  if (opts.attitude && opts.attitude.length > 0) {
+    figures = [];
+    for (let i = 0; i + 1 < callouts.length; i++) {
+      const t = (callouts[i].t + callouts[i + 1].t) / 2;
+      const a = opts.attitude.reduce((best, s) =>
+        Math.abs(s.t - t) < Math.abs(best.t - t) ? s : best);
+      if (Math.abs(a.t - t) > 0.5) continue;
+      const z = height(t);
+      if (z === null) continue;
+      const fix = fixes.reduce((best, p) =>
+        Math.abs(p.timestamp - t) < Math.abs(best.timestamp - t) ? p : best);
+
+      const R = rotationFromEuler(a.roll_deg, a.pitch_deg, a.yaw_degT);
+      // NED torso axes: up = R·(0,0,-1) (negated 3rd column), chest = R·(1,0,0)
+      // (1st column). Chart plane: x̂ = approach direction (north uy, east ux),
+      // ẑ = up (−NED down).
+      const upVec = { n: -R[0][2], e: -R[1][2], d: -R[2][2] };
+      const fwdVec = { n: R[0][0], e: R[1][0], d: R[2][0] };
+      figures.push({
+        t,
+        x_ft: along(fix),
+        z_ft: z,
+        up: [upVec.n * uy + upVec.e * ux, -upVec.d],
+        forward: [fwdVec.n * uy + fwdVec.e * ux, -fwdVec.d],
+      });
+    }
+  }
+
+  return { points, callouts, figures, approachHeading_degT, window_s: windowS };
 }

@@ -67,4 +67,62 @@ describe('buildFlareProfile', () => {
   it('returns null when there is no GPS in the window', () => {
     expect(buildFlareProfile([], baro, accel, 1000)).toBeNull();
   });
+
+  it('omits figures when no attitude series is supplied', () => {
+    expect(profile.figures).toBeUndefined();
+  });
+
+  describe('torso figures', () => {
+    // Attitude at 20 Hz over the approach: upright, facing the (due-east)
+    // approach until 8 s out, then pitched 30° forward (diving) after.
+    const attitude: Array<{ t: number; roll_deg: number; pitch_deg: number; yaw_degT: number }> = [];
+    for (let t = 978; t <= 1002; t += 0.05) {
+      attitude.push({
+        t,
+        roll_deg: 0,
+        pitch_deg: t < 992 ? 0 : -30,
+        yaw_degT: 90,
+      });
+    }
+    const p = buildFlareProfile(gps, baro, accel, 1000, {
+      windowS: 18, calloutCount: 9, attitude,
+    })!;
+
+    it('places one figure between each pair of callouts', () => {
+      expect(p.figures).toHaveLength(8);
+      for (let i = 0; i < 8; i++) {
+        expect(p.figures![i].t).toBeCloseTo((p.callouts[i].t + p.callouts[i + 1].t) / 2, 5);
+        expect(p.figures![i].x_ft).toBeGreaterThan(p.callouts[i].x_ft);
+        expect(p.figures![i].x_ft).toBeLessThan(p.callouts[i + 1].x_ft);
+      }
+    });
+
+    it('projects an upright, approach-facing torso to vertical up / horizontal forward', () => {
+      const early = p.figures![0]; // t ≈ 983 — upright phase
+      expect(early.up[0]).toBeCloseTo(0, 5);
+      expect(early.up[1]).toBeCloseTo(1, 5);
+      expect(early.forward[0]).toBeCloseTo(1, 5);
+      expect(early.forward[1]).toBeCloseTo(0, 5);
+    });
+
+    it('projects a 30° forward pitch as a downrange lean', () => {
+      const late = p.figures![p.figures!.length - 1]; // t ≈ 998.9 — diving phase
+      // up tilts downrange: (sin 30, cos 30); chest points down by sin 30
+      expect(late.up[0]).toBeCloseTo(0.5, 5);
+      expect(late.up[1]).toBeCloseTo(Math.sqrt(3) / 2, 5);
+      expect(late.forward[0]).toBeCloseTo(Math.sqrt(3) / 2, 5);
+      expect(late.forward[1]).toBeCloseTo(-0.5, 5);
+    });
+
+    it('foreshortens a torso yawed off the approach axis', () => {
+      const side = buildFlareProfile(gps, baro, accel, 1000, {
+        windowS: 18, calloutCount: 9,
+        attitude: attitude.map(a => ({ ...a, pitch_deg: 0, yaw_degT: 0 })), // facing north, approach east
+      })!;
+      const f = side.figures![0];
+      expect(f.up[1]).toBeCloseTo(1, 5);       // still upright
+      expect(f.forward[0]).toBeCloseTo(0, 5);  // chest normal ⊥ chart plane → vanishes
+      expect(f.forward[1]).toBeCloseTo(0, 5);
+    });
+  });
 });
