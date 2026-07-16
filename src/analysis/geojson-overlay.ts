@@ -134,9 +134,12 @@ export const DEFAULT_OVERLAY_STYLE = {
 /**
  * Landing area overlay style (for DZ areas)
  */
+// Demarcation for the landing area a jumper touched down in: semi-transparent
+// blue shade with a slightly darker, more opaque blue border.
 export const LANDING_AREA_STYLE = {
-  fillColor: '#22cc44',
-  fillOpacity: 0.15,
-  strokeColor: '#22cc44',
+  fillColor: '#3b82f6',
+  fillOpacity: 0.18,
+  strokeColor: '#1d4ed8',
+  strokeOpacity: 0.85,
   strokeWidth: 2
 };

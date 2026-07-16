@@ -228,6 +228,49 @@ export function calculateDescentBounds(
   return calculateBounds(descent);
 }
 
+/** Ray-cast point-in-ring test. Ring is [lon, lat] pairs (GeoJSON order),
+ *  closed or open (last==first not required). */
+export function pointInRing(lon: number, lat: number, ring: number[][]): boolean {
+  let inside = false;
+  let j = ring.length - 1;
+  for (let i = 0; i < ring.length; i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if ((yi > lat) !== (yj > lat) && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+    j = i;
+  }
+  return inside;
+}
+
+/** Great-circle distance in meters between two WGS-84 points. */
+export function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000;
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(lat2 - lat1);
+  const dLon = rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+/** First Polygon feature of a GeoJSON FeatureCollection containing the point
+ *  (outer ring only; holes are not used for landing areas). */
+export function findContainingPolygon(
+  collection: { features: Array<{ geometry: { type: string; coordinates: unknown }; properties: Record<string, unknown> }> },
+  lon: number,
+  lat: number
+): { geometry: { type: string; coordinates: unknown }; properties: Record<string, unknown> } | null {
+  for (const f of collection.features) {
+    if (f.geometry?.type !== 'Polygon') continue;
+    const ring = (f.geometry.coordinates as number[][][])[0];
+    if (ring && pointInRing(lon, lat, ring)) return f;
+  }
+  return null;
+}
+
 /**
  * Calculate center point of GPS data
  */

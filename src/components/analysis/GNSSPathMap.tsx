@@ -169,6 +169,7 @@ export function GNSSPathMap({
           source: sourceId,
           paint: {
             'line-color': LANDING_AREA_STYLE.strokeColor,
+            'line-opacity': LANDING_AREA_STYLE.strokeOpacity,
             'line-width': LANDING_AREA_STYLE.strokeWidth
           },
           filter: ['any',
